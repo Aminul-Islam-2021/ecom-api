@@ -1,0 +1,297 @@
+import cloudinary from "../config/cloudinary.js";
+
+class CloudinaryService {
+  constructor() {
+    // Define preset configurations for different image types
+    this.presets = {
+      product: {
+        folder: "ecom-products",
+        transformation: {
+          width: 800,
+          height: 800,
+          crop: "fill",
+          gravity: "auto",
+          quality: "auto:good",
+          format: "auto"
+        }
+      },
+      card: {
+        folder: "ecom-cards",
+        transformation: {
+          width: 400,
+          height: 300,
+          crop: "fill",
+          gravity: "auto",
+          quality: "auto:eco",
+          format: "auto"
+        }
+      },
+      banner: {
+        folder: "ecom-banners",
+        transformation: {
+          width: 1200,
+          height: 400,
+          crop: "fill",
+          gravity: "auto",
+          quality: "auto:best",
+          format: "auto"
+        }
+      },
+      thumbnail: {
+        folder: "ecom-thumbnails",
+        transformation: {
+          width: 150,
+          height: 150,
+          crop: "fill",
+          gravity: "auto",
+          quality: "auto:low",
+          format: "auto"
+        }
+      }
+    };
+  }
+
+  /*
+   * Upload a single image with specified type
+   * @param {Object} file - The file object to upload
+   * @param {string} type - Image type (product, card, banner, thumbnail)
+   * @returns {Promise<Object>} - Upload result with secure_url and public_id
+   */
+  async uploadImage(file, type = 'product') {
+    try {
+      if (!this.presets[type]) {
+        throw new Error(`Invalid image type: ${type}`);
+      }
+
+      const preset = this.presets[type];
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: preset.folder,
+        transformation: preset.transformation
+      });
+
+      return {
+        type,
+        secure_url: result.secure_url,
+        public_id: result.public_id,
+        width: result.width,
+        height: result.height
+      };
+    } catch (error) {
+      console.error(`Error uploading ${type} image to Cloudinary:`, error);
+      throw error;
+    }
+  }
+
+  /*
+   * Upload multiple images of the same type
+   * @param {Array} files - Array of file objects
+   * @param {string} type - Image type (product, card, banner, thumbnail)
+   * @returns {Promise<Array>} - Array of upload results
+   */
+  async uploadMultipleImages(files, type = 'product') {
+    try {
+      const uploadedImages = await Promise.all(
+        files.map(file => this.uploadImage(file, type))
+      );
+      return uploadedImages;
+    } catch (error) {
+      console.error(`Error uploading multiple ${type} images:`, error);
+      throw new Error(`Failed to upload ${type} images`);
+    }
+  }
+
+  /*
+   * Delete a single image from Cloudinary
+   * @param {string} public_id - The public_id of the image to delete
+   * @returns {Promise<Object>} - Deletion result
+   */
+  async deleteImage(public_id) {
+    try {
+      if (!public_id) {
+        throw new Error("Missing public_id for deletion");
+      }
+      const result = await cloudinary.uploader.destroy(public_id);
+      return result;
+    } catch (error) {
+      console.error("Error deleting image from Cloudinary:", error);
+      throw error;
+    }
+  }
+
+  /*
+   * Delete multiple images from Cloudinary
+   * @param {Array} public_ids - Array of public_ids to delete
+   * @returns {Promise<Array>} - Array of deletion results
+   */
+  async deleteMultipleImages(public_ids) {
+    try {
+      const deletePromises = public_ids.map(public_id => this.deleteImage(public_id));
+      const results = await Promise.all(deletePromises);
+      return results;
+    } catch (error) {
+      console.error("Error deleting multiple images from Cloudinary:", error);
+      throw new Error("Failed to delete images from Cloudinary");
+    }
+  }
+
+  /*
+   * Get image URL with custom transformations
+   * @param {string} public_id - The public_id of the image
+   * @param {Object} options - Transformation options
+   * @returns {string} - Transformed image URL
+   */
+  getImageUrl(public_id, options = {}) {
+    return cloudinary.url(public_id, options);
+  }
+
+  /*
+   * Add a new image type preset
+   * @param {string} name - Preset name
+   * @param {Object} config - Configuration object {folder, transformation}
+   */
+  addPreset(name, config) {
+    if (!name || !config || !config.folder || !config.transformation) {
+      throw new Error("Invalid preset configuration");
+    }
+    this.presets[name] = config;
+  }
+}
+
+// Export a singleton instance
+export default new CloudinaryService();
+
+
+
+
+
+
+
+
+// Usage example (in another file):
+// import cloudinaryService from './path/to/this/file.js';
+// Upload a product image
+const productImage = await cloudinaryService.uploadImage(file, 'product');
+
+// Upload multiple card images
+const cardImages = await cloudinaryService.uploadMultipleImages(files, 'card');
+
+// Delete images
+await cloudinaryService.deleteImage(public_id);
+await cloudinaryService.deleteMultipleImages([public_id1, public_id2]);
+
+// Get transformed URL
+const thumbnailUrl = cloudinaryService.getImageUrl(public_id, {
+  width: 100,
+  height: 100,
+  crop: 'fill'
+});
+
+// Add a new preset
+cloudinaryService.addPreset('gallery', {
+  folder: "ecom-gallery",
+  transformation: {
+    width: 1024,
+    height: 768,
+    crop: "fill",
+    quality: "auto:best"
+  }
+});
+
+
+//
+The getImageUrl() method in your CloudinaryService class serves an important purpose for dynamic image optimization and transformation in your MERN ecommerce app. Here's why it's valuable:
+
+Key Purposes:
+On-Demand Image Transformations:
+
+Generates URLs for different image versions without storing multiple copies
+
+Example use cases:
+
+javascript
+Copy
+// Product thumbnail
+cloudinaryService.getImageUrl(public_id, {width: 100, height: 100, crop: 'fill'});
+
+// Product detail view
+cloudinaryService.getImageUrl(public_id, {width: 800, height: 800, crop: 'limit'});
+
+// Zoomed version
+cloudinaryService.getImageUrl(public_id, {width: 1200, height: 1200, crop: 'pad'});
+Performance Optimization:
+
+Delivers appropriately sized images for each context
+
+Reduces bandwidth usage (sends 100px image to thumbnail listings instead of 800px original)
+
+Responsive Image Support:
+
+javascript
+Copy
+// Example for responsive images
+const srcSet = [
+  cloudinaryService.getImageUrl(public_id, {width: 320}),
+  cloudinaryService.getImageUrl(public_id, {width: 640}),
+  cloudinaryService.getImageUrl(public_id, {width: 1024})
+].join(', ');
+Common Ecommerce Use Cases:
+Product Gallery:
+
+javascript
+Copy
+// Main product image
+const mainImage = cloudinaryService.getImageUrl(product.mainImageId, {
+  width: 800,
+  height: 800,
+  crop: 'fill',
+  quality: 'auto'
+});
+
+// Thumbnail images
+const thumbnails = product.galleryImages.map(img => 
+  cloudinaryService.getImageUrl(img.public_id, {
+    width: 100,
+    height: 100,
+    crop: 'thumb',
+    gravity: 'face'
+  })
+);
+Adaptive Images:
+
+javascript
+Copy
+// Banner image that adapts to container
+const bannerUrl = cloudinaryService.getImageUrl(bannerId, {
+  width: 1200,
+  crop: 'scale',
+  quality: 'auto:good'
+});
+Special Effects:
+
+javascript
+Copy
+// Product hover effect
+const hoverImage = cloudinaryService.getImageUrl(productId, {
+  effect: 'blur:1000',
+  opacity: 50,
+  width: 800
+});
+Behind the Scenes:
+When you call getImageUrl(), Cloudinary:
+
+Doesn't modify your original image
+
+Generates a new transformed version on first request
+
+Caches the transformed version for future requests
+
+Delivers via fast CDN
+
+Why It's Better Than Storing Multiple Versions:
+Saves storage space (one original instead of N copies)
+
+More flexible (change transformations without re-uploading)
+
+Better performance (transformations happen at CDN edge)
+
+This method is particularly powerful in ecommerce applications where you need the same image in many different contexts (thumbnails, galleries, zoom views, etc.) with optimal performance.
