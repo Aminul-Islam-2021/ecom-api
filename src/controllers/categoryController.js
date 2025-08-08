@@ -1,4 +1,5 @@
 import { Category, SubCategory } from "../models/categoryModel.js";
+import slugify from "slugify";
 
 // Utility function for error handling
 const handleError = (res, error, message, statusCode = 500) => {
@@ -134,7 +135,7 @@ export const deleteCategoryController = async (req, res) => {
 export const createSubCategoryController = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const {name} = req.body;
     if (!name) {
       return res
         .status(400)

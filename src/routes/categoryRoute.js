@@ -25,7 +25,7 @@ router
 
 // SubCategory Routes
 router
-  .route("/:categoryId/subcategory")
+  .route("/:id/subcategory")
   .post(createSubCategoryController)
   .get(getSubCategoriesController);
 

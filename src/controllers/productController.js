@@ -9,7 +9,7 @@ import { Category, SubCategory } from "../models/categoryModel.js";
 import { Product } from "../models/productModel.js";
 import ApiFeatures from "../utils/apiFeatures.js";
 import { cleanUpFiles } from "../config/multerConfig.js";
-
+ 
 // Name : Create product
 // Route : http://localhost:8000/product
 // Method : POST
